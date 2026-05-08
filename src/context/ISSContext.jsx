@@ -77,7 +77,8 @@ export const ISSProvider = ({ children }) => {
 
       setHistory(prev => {
         if (prev.length > 0 && prev[prev.length - 1].timestamp === timestamp) return prev;
-        return [...prev, newPos].slice(-30);
+        const historyPoint = { ...newPos, velocity: velocity };
+        return [...prev, historyPoint].slice(-30);
       });
 
       fetchNearestPlace(latitude, longitude);

@@ -50,7 +50,7 @@ const Dashboard = () => {
   // Process data for charts
   const speedData = history.map((h, i) => ({
     time: new Date(h.timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-    speed: history[i-1] ? Math.round(speed) : 27600 + Math.random() * 100 // Fallback/Initial
+    speed: h.velocity ? Math.round(h.velocity) : (27600 + Math.random() * 50)
   })).slice(-20);
 
   const newsCategories = articles.reduce((acc, curr) => {
