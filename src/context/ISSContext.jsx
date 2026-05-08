@@ -18,15 +18,51 @@ export const ISSProvider = ({ children }) => {
   // Using wheretheiss.at API - It's HTTPS and more reliable than open-notify
   const fetchISSData = useCallback(async () => {
     try {
-      let response;
-      try {
-        response = await axios.get('https://api.wheretheiss.at/v1/satellites/25544', { timeout: 10000 });
-      } catch (directErr) {
-        console.warn('Direct ISS fetch failed, trying proxy...');
-        response = await axios.get('https://api.allorigins.win/raw?url=https://api.wheretheiss.at/v1/satellites/25544');
+      let responseData = null;
+      
+      const attemptFetch = async (url, isProxy = false) => {
+        const res = await axios.get(url, { timeout: 8000 });
+        let data = res.data;
+        
+        // AllOrigins 'get' returns { contents: "{...}" }
+        if (data && data.contents) {
+           data = data.contents;
+        }
+        
+        // Handle string responses from proxies
+        if (typeof data === 'string') {
+          try {
+            data = JSON.parse(data);
+          } catch (e) {
+            console.error('Failed to parse proxy response:', data);
+            return null;
+          }
+        }
+        return data;
+      };
+
+      // Try list of proxies
+      const urls = [
+        'https://api.wheretheiss.at/v1/satellites/25544', // Direct
+        'https://api.allorigins.win/get?url=' + encodeURIComponent('https://api.wheretheiss.at/v1/satellites/25544'),
+        'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent('https://api.wheretheiss.at/v1/satellites/25544'),
+        'https://corsproxy.io/?' + encodeURIComponent('https://api.wheretheiss.at/v1/satellites/25544')
+      ];
+
+      for (const url of urls) {
+        try {
+          responseData = await attemptFetch(url);
+          if (responseData && responseData.latitude) break;
+        } catch (err) {
+          console.warn(`Fetch failed for ${url.substring(0, 30)}...`);
+        }
       }
 
-      const { latitude, longitude, velocity, altitude: alt, timestamp } = response.data;
+      if (!responseData || !responseData.latitude) {
+        throw new Error('All tracking nodes are offline');
+      }
+
+      const { latitude, longitude, velocity, altitude: alt, timestamp } = responseData;
       
       const newPos = {
         lat: parseFloat(latitude),
@@ -48,12 +84,14 @@ export const ISSProvider = ({ children }) => {
       setError(null);
     } catch (err) {
       console.error('ISS Fetch Error:', err);
-      setError('Failed to fetch ISS location');
-      if (loading) toast.error('ISS Tracking error. Mission control is unreachable.');
+      if (!position) {
+        setError('Failed to fetch ISS location');
+      }
+      if (loading) toast.error('Signal lost. Attempting to re-establish link...');
     } finally {
       setLoading(false);
     }
-  }, [loading]);
+  }, [loading, position]);
 
   const fetchNearestPlace = async (lat, lon) => {
     try {
