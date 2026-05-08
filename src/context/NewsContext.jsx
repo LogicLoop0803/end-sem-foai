@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
@@ -8,15 +8,13 @@ export const NewsProvider = ({ children }) => {
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [category, setCategory] = useState('technology');
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState('publishedAt');
+  const [sortBy, setSortBy] = useState('published_at'); // SNAPI uses published_at
 
-  const API_KEY = import.meta.env.VITE_NEWS_API_KEY;
-
-  const fetchNews = async (force = false) => {
-    // Check cache
-    const cacheKey = `news_${category}_${searchQuery}_${sortBy}`;
+  // We're switching to Spaceflight News API (SNAPI) 
+  // because NewsAPI.org free tier blocks production (Vercel) requests.
+  const fetchNews = useCallback(async (force = false) => {
+    const cacheKey = `snapi_news_${searchQuery}`;
     const cachedData = localStorage.getItem(cacheKey);
     const cacheTime = localStorage.getItem(`${cacheKey}_time`);
 
@@ -27,28 +25,41 @@ export const NewsProvider = ({ children }) => {
 
     setLoading(true);
     try {
-      const url = searchQuery 
-        ? `https://newsapi.org/v2/everything?q=${searchQuery}&sortBy=${sortBy}&apiKey=${API_KEY}`
-        : `https://newsapi.org/v2/top-headlines?category=${category}&apiKey=${API_KEY}`;
+      // SNAPI v4 Endpoint
+      let url = 'https://api.spaceflightnewsapi.net/v4/articles/?limit=15';
+      if (searchQuery) {
+        url += `&search=${searchQuery}`;
+      }
       
       const response = await axios.get(url);
-      const data = response.data.articles.filter(a => a.title !== '[Removed]');
       
-      setArticles(data);
-      localStorage.setItem(cacheKey, JSON.stringify(data));
+      // Normalize data to match our existing component structure
+      const normalizedArticles = response.data.results.map(article => ({
+        title: article.title,
+        description: article.summary,
+        url: article.url,
+        urlToImage: article.image_url,
+        publishedAt: article.published_at,
+        source: { name: article.news_site },
+        author: article.news_site
+      }));
+      
+      setArticles(normalizedArticles);
+      localStorage.setItem(cacheKey, JSON.stringify(normalizedArticles));
       localStorage.setItem(`${cacheKey}_time`, Date.now().toString());
       setError(null);
     } catch (err) {
-      setError('Failed to fetch news. Please check your API key.');
-      toast.error('News API error');
+      console.error('News Fetch Error:', err);
+      setError('Failed to fetch space news.');
+      toast.error('News feed is temporarily unavailable.');
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchQuery]);
 
   useEffect(() => {
-    if (API_KEY) fetchNews();
-  }, [category, sortBy]);
+    fetchNews();
+  }, [fetchNews]);
 
   const handleSearch = () => {
     fetchNews(true);
@@ -59,8 +70,8 @@ export const NewsProvider = ({ children }) => {
       articles,
       loading,
       error,
-      category,
-      setCategory,
+      category: 'Space', // Hardcoded as we are using a specialized space API now
+      setCategory: () => {}, // No-op for compatibility
       searchQuery,
       setSearchQuery,
       sortBy,

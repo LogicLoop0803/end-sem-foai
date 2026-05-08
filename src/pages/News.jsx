@@ -6,7 +6,7 @@ import {
   ExternalLink, 
   Calendar, 
   User,
-  Filter
+  Rocket
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -32,7 +32,7 @@ const NewsCard = ({ article }) => (
     <div className="p-5 flex-1 flex flex-col">
       <div className="flex items-center gap-3 mb-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
         <span className="flex items-center gap-1"><Calendar size={12} /> {new Date(article.publishedAt).toLocaleDateString()}</span>
-        <span className="flex items-center gap-1"><User size={12} /> {article.author || 'Staff'}</span>
+        <span className="flex items-center gap-1"><User size={12} /> {article.author || 'Mission Control'}</span>
       </div>
       <h3 className="font-bold text-lg mb-2 line-clamp-2 group-hover:text-space-600 dark:group-hover:text-space-400 transition-colors">
         {article.title}
@@ -57,39 +57,22 @@ const News = () => {
   const { 
     articles, 
     loading, 
-    category, 
-    setCategory, 
     searchQuery, 
     setSearchQuery, 
     refresh,
-    handleSearch,
-    sortBy,
-    setSortBy
+    handleSearch
   } = useNews();
-
-  const categories = ['technology', 'science', 'business', 'general'];
 
   return (
     <div className="space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Space News Dashboard</h1>
-          <p className="text-slate-500 dark:text-slate-400">Latest updates from across the galaxy and beyond.</p>
+          <p className="text-slate-500 dark:text-slate-400">Verified transmissions from global space agencies.</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setCategory(cat)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${
-                category === cat 
-                  ? 'bg-space-600 text-white shadow-lg shadow-space-500/30' 
-                  : 'bg-white dark:bg-space-900 border border-slate-200 dark:border-white/10'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
+        <div className="flex items-center gap-2 bg-space-600/10 text-space-600 dark:text-space-400 px-4 py-2 rounded-2xl border border-space-600/20">
+          <Rocket size={18} />
+          <span className="text-xs font-bold uppercase tracking-widest">Live SNAPI Feed</span>
         </div>
       </div>
 
@@ -105,23 +88,13 @@ const News = () => {
             className="bg-transparent border-none focus:ring-0 text-sm flex-1 ml-2"
           />
         </div>
-        <div className="flex gap-2">
-          <select 
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="bg-white dark:bg-space-900 border border-slate-200 dark:border-white/10 rounded-2xl px-4 py-2 text-sm focus:ring-2 focus:ring-space-500 transition-all outline-none"
-          >
-            <option value="publishedAt">Latest First</option>
-            <option value="relevancy">Most Relevant</option>
-            <option value="popularity">Trending</option>
-          </select>
-          <button 
-            onClick={refresh}
-            className="p-3 bg-space-600 text-white rounded-2xl hover:bg-space-700 transition-all shadow-lg"
-          >
-            <RefreshCcw size={20} />
-          </button>
-        </div>
+        <button 
+          onClick={refresh}
+          className="p-3 bg-space-600 text-white rounded-2xl hover:bg-space-700 transition-all shadow-lg flex items-center gap-2 px-6"
+        >
+          <RefreshCcw size={20} className={loading ? 'animate-spin' : ''} />
+          <span className="hidden sm:inline font-bold text-sm">Sync Feed</span>
+        </button>
       </div>
 
       {loading ? (
@@ -141,7 +114,7 @@ const News = () => {
       {!loading && articles.length === 0 && (
         <div className="text-center py-20 glass-card rounded-3xl">
           <p className="text-slate-500 font-medium">No transmissions found matching your criteria.</p>
-          <button onClick={() => { setSearchQuery(''); setCategory('technology'); }} className="mt-4 text-space-600 font-bold">Clear Filters</button>
+          <button onClick={() => { setSearchQuery(''); }} className="mt-4 text-space-600 font-bold">Clear Search</button>
         </div>
       )}
     </div>
