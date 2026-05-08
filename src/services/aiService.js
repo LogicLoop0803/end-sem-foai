@@ -2,15 +2,15 @@ import axios from 'axios';
 import { retryWithBackoff } from '../utils/retry';
 
 const API_URL = 'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2';
-const TOKEN = import.meta.env.VITE_AI_TOKEN;
-
 /**
  * Sends a message to the Mistral AI model via HuggingFace Inference API
  */
 export const fetchAIResponse = async (prompt) => {
-  if (!TOKEN || TOKEN === '') {
-    console.error('AI Service: Token is missing from environment variables.');
-    return "Error: AI Token (VITE_AI_TOKEN) is missing. Please check your .env file and restart the server.";
+  const TOKEN = import.meta.env.VITE_AI_TOKEN;
+
+  if (!TOKEN || TOKEN === '' || TOKEN.includes('YOUR_HUGGINGFACE_TOKEN')) {
+    console.error('AI Service: Token is missing or invalid.');
+    return "Error: AI Token (VITE_AI_TOKEN) is missing or still set to placeholder. If you are running locally, check your .env file and restart the server. If this is a hosted website, please add VITE_AI_TOKEN to your environment variables in the hosting dashboard (e.g. Vercel/Netlify settings).";
   }
 
   const callApi = () => axios.post(

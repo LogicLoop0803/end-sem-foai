@@ -18,7 +18,14 @@ export const ISSProvider = ({ children }) => {
   // Using wheretheiss.at API - It's HTTPS and more reliable than open-notify
   const fetchISSData = useCallback(async () => {
     try {
-      const response = await axios.get('https://api.wheretheiss.at/v1/satellites/25544');
+      let response;
+      try {
+        response = await axios.get('https://api.wheretheiss.at/v1/satellites/25544', { timeout: 10000 });
+      } catch (directErr) {
+        console.warn('Direct ISS fetch failed, trying proxy...');
+        response = await axios.get('https://api.allorigins.win/raw?url=https://api.wheretheiss.at/v1/satellites/25544');
+      }
+
       const { latitude, longitude, velocity, altitude: alt, timestamp } = response.data;
       
       const newPos = {
@@ -28,25 +35,21 @@ export const ISSProvider = ({ children }) => {
       };
 
       setPosition(newPos);
-      setSpeed(velocity); // Speed is provided in km/h directly by this API
+      setSpeed(velocity);
       setAltitude(alt);
       setLastUpdated(new Date().toLocaleTimeString());
 
       setHistory(prev => {
-        // Prevent duplicate timestamps
         if (prev.length > 0 && prev[prev.length - 1].timestamp === timestamp) return prev;
         return [...prev, newPos].slice(-30);
       });
 
-      // Reverse Geocoding with proper User-Agent
       fetchNearestPlace(latitude, longitude);
-      
       setError(null);
     } catch (err) {
       console.error('ISS Fetch Error:', err);
       setError('Failed to fetch ISS location');
-      // Only toast on the first failure to avoid spamming
-      if (loading) toast.error('ISS Tracking error. Check your connection.');
+      if (loading) toast.error('ISS Tracking error. Mission control is unreachable.');
     } finally {
       setLoading(false);
     }
@@ -54,11 +57,11 @@ export const ISSProvider = ({ children }) => {
 
   const fetchNearestPlace = async (lat, lon) => {
     try {
-      // Nominatim requires a User-Agent header for their usage policy
       const res = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10`, {
         headers: {
           'User-Agent': 'SpacePulse-Dashboard/1.0'
-        }
+        },
+        timeout: 5000
       });
       setNearestPlace(res.data.display_name || 'Over the Ocean');
     } catch (e) {
@@ -68,9 +71,7 @@ export const ISSProvider = ({ children }) => {
 
   const fetchAstronauts = async () => {
     try {
-      // Open Notify astros is usually fine as it doesn't change often
-      const response = await axios.get('https://api.corls.com/http://api.open-notify.org/astros.json'); 
-      // Note: If this fails, we can fallback to static data
+      const response = await axios.get('https://api.allorigins.win/raw?url=http://api.open-notify.org/astros.json'); 
       setAstronauts(response.data.people);
     } catch (err) {
       console.error('Failed to fetch astronauts, using fallback data');
